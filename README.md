@@ -14,6 +14,6 @@ AnoFold is a toolkit for analyzing protein structures and performing molecular d
 Clone this repository:
 
 ```bash
-git clone https://github.com/yourusername/AnoFold.git
+git clone https://github.com/sanjaynagi/AnoFold.git
 cd AnoFold
 ```
