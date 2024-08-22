@@ -1,10 +1,10 @@
-# AnoFold
+# VectorFold
 
-AnoFold is a toolkit for analyzing protein structures and performing molecular docking for *Anopheles gambiae* proteins using AlphaFold models.
+VectorFold is a toolkit for analyzing protein structures and performing molecular docking for proteins in VectorBase using AlphaFold models.
 
 ## Features
 
-- Download AlphaFold PDB structures for *An. gambiae* proteins
+- Download AlphaFold PDB structures for any protein in both vectorbase and the alphafold database
 - Locate active sites of proteins
 - Perform molecular docking using GNINA with CNN scoring
 - Pre-stored ligand libraries
@@ -14,6 +14,6 @@ AnoFold is a toolkit for analyzing protein structures and performing molecular d
 Clone this repository:
 
 ```bash
-git clone https://github.com/sanjaynagi/AnoFold.git
-cd AnoFold
+git clone https://github.com/sanjaynagi/VectorFold.git
+cd VectorFold
 ```
