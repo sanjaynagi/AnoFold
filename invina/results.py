@@ -1,11 +1,10 @@
-import py3Dmol
-import pandas as pd
-import numpy as np
-import plotly.express as px
 import os
 import re
 import pickle
+import pandas as pd
+import numpy as np
 
+import py3Dmol
 from rdkit import Chem
 from rdkit.Chem import rdFMCS
 
