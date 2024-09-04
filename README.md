@@ -1,6 +1,6 @@
-# VectorFold
+# invina
 
-VectorFold is a toolkit for analyzing protein structures and performing molecular docking for proteins in VectorBase using AlphaFold models.
+invina is a toolkit for analyzing protein structures and performing inverse molecular docking for proteins in VectorBase using AlphaFold models.
 
 ## Features
 
@@ -14,6 +14,6 @@ VectorFold is a toolkit for analyzing protein structures and performing molecula
 Clone this repository:
 
 ```bash
-git clone https://github.com/sanjaynagi/VectorFold.git
-cd VectorFold
+git clone https://github.com/sanjaynagi/invina.git
+cd invina
 ```
