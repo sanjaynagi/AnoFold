@@ -1,46 +1,26 @@
-from scipy.cluster.hierarchy import linkage
 import plotly.graph_objects as go
-import plotly.figure_factory as ff
 import numpy as np
 import pandas as pd
-import rdkit.Chem as Chem
-import rdkit.Chem.rdFMCS as rdFMCS
+import py3Dmol
 
-def calculate_rmsd_matrix(poses):
-    """Calculate RMSD matrix for all pose pairs."""
-    import math
-    size = len(poses)
-    rmsd_matrix = np.zeros((size, size))
-    
-    for i, mol in enumerate(poses):
-        for j, jmol in enumerate(poses):
-            # MCS identification between reference pose and target pose
-            r = rdFMCS.FindMCS([mol, jmol])
-            # Atom map for reference and target
-            a = mol.GetSubstructMatch(Chem.MolFromSmarts(r.smartsString))
-            b = jmol.GetSubstructMatch(Chem.MolFromSmarts(r.smartsString))
-            # Atom map generation
-            amap = list(zip(a, b))
-
-            # Calculate RMSD
-            # distance calculation per atom pair
-            distances=[]
-            for atomA, atomB in amap:
-                pos_A=mol.GetConformer().GetAtomPosition (atomA)
-                pos_B=jmol.GetConformer().GetAtomPosition (atomB)
-                coord_A=np.array((pos_A.x,pos_A.y,pos_A.z))
-                coord_B=np.array ((pos_B.x,pos_B.y,pos_B.z))
-                dist_numpy = np.linalg.norm(coord_A-coord_B)
-                distances.append(dist_numpy)
-    
-            # This is the RMSD formula from wikipedia
-            rmsd=math.sqrt(1/len(distances)*sum([i*i for i in distances]))
-    
-            #saving the rmsd values to a matrix and a table for clustering
-            rmsd_matrix[i ,j]=rmsd
-    
-    return rmsd_matrix
-
+def _view_3d(self, receptor_highlight=None, sticks=False):
+    v = py3Dmol.view()
+    v.addModel(open(self.receptor_path).read())
+    if sticks:
+        v.setStyle({'cartoon':{},'stick':{'radius':.1}})
+    else:
+        v.setStyle({'cartoon':{}})
+    if receptor_highlight:
+        for i in range(receptor_highlight-3, receptor_highlight+3):
+            v.setStyle({'model': -1, 'serial': i}, {"cartoon": {'color': 'yellow'}, 'stick':{'radius':.3, 'color':'yellow'}})
+    v.addModel(open(self.ligand_path).read())
+    v.setStyle({'model':1},{'stick':{'colorscheme':'dimgrayCarbon','radius':.125}})
+    v.addModelsAsFrames(open(self.docked_path).read())
+    v.setStyle({'model':2},{'stick':{'colorscheme':'greenCarbon'}})
+    v.zoomTo({'model':1})
+    v.rotate(90)
+    v.animate({'interval':5000})
+    return v
 
 def plot_dendrogram(
     dist,

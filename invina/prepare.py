@@ -56,8 +56,7 @@ def pdb_to_active_site_coords(receptor_path, active_site_motif, catalytic_codon_
         flanking_end = min(len(aa_sequence), end + flanking_size)
         flanking = aa_sequence[flanking_start:start] + '[' + aa_sequence[start:end] + ']' + aa_sequence[end:flanking_end]
 
-        print(f"Motif detected in PDB at codon {start+1}:{end} = {aa_sequence[start:end]}")
-        print(f"Flanking sequence: {flanking}")
+        print(f"Motif detected in PDB at codon {start+1}:{end} = {aa_sequence[start:end]}, Flanking sequence: {flanking}")
 
         # Find coordinates for the target molecule
         target_idx = start + 1 + catalytic_codon_in_motif
@@ -79,23 +78,30 @@ def pdb_to_active_site_coords(receptor_path, active_site_motif, catalytic_codon_
 
     return results
 
-def download_ligand(ligand_name, repo_url="https://raw.githubusercontent.com/sanjaynagi/VectorFold/main/ligands", save_path="ligands"):
-    os.makedirs(f"{save_path}", exist_ok=True)
+def download_ligand(ligand_name, repo_url="https://raw.githubusercontent.com/sanjaynagi/invina/main/ligands/raw", save_path="ligands"):
+    os.makedirs(save_path, exist_ok=True)
     
-    file_url = f"{repo_url}/raw/{ligand_name}.pdbqt"
-    file_path = f"{save_path}/raw/{ligand_name}.pdbqt"
+    file_url = os.path.join(repo_url, f"{ligand_name}.pdbqt")
+    file_path = os.path.join(save_path, f"{ligand_name}.pdbqt")
     
     try:
         response = requests.get(file_url)
-        response.raise_for_status()  # Check if the request was successful
+        response.raise_for_status()  # This will raise an HTTPError for bad responses (4xx or 5xx)
         
         with open(file_path, 'wb') as file:
             file.write(response.content)
-        print(f"Ligand '{ligand_name}.pdbqt' downloaded successfully.\n")
+        print(f"Ligand '{ligand_name}.pdbqt' downloaded successfully.")
+        return file_path
+    
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            raise ValueError(f"Ligand file '{ligand_name}.pdbqt' not found at {file_url}")
+        else:
+            raise ValueError(f"HTTP error occurred while downloading ligand: {e}")
     except requests.exceptions.RequestException as e:
-        print(f"Failed to download ligand: {e}")
+        raise ValueError(f"Error occurred while downloading ligand: {e}")
 
-def download_and_prepare_ligand(ligand_name, save_path, repo_url="https://raw.githubusercontent.com/sanjaynagi/VectorFold/main/ligands/", pH=7.4):
+def download_and_prepare_ligand(ligand_name, save_path, repo_url="https://raw.githubusercontent.com/sanjaynagi/invina/main/ligands/raw", pH=7.4):
     """
     Download a ligand file and prepare it by adding hydrogens at a specified pH using OpenBabel.
     
@@ -117,14 +123,14 @@ def download_and_prepare_ligand(ligand_name, save_path, repo_url="https://raw.gi
     mol = openbabel.OBMol()
     
     # Read the downloaded PDBQT file
-    input_path = f"{save_path}/raw/{ligand_name}.pdbqt"
+    input_path = os.path.join(save_path, "raw", f"{ligand_name}.pdbqt")
     obConversion.ReadFile(mol, input_path)
     
     # Add hydrogens at the specified pH
     mol.AddHydrogens(False, True, pH)
     
     # Write the prepared molecule to a new file
-    output_path = f"{save_path}/{ligand_name}.pdbqt"
+    output_path = os.path.join(save_path, f"{ligand_name}.pdbqt")
     obConversion.WriteFile(mol, output_path)
     
     print(f"Ligand prepared and saved as '{output_path}'")

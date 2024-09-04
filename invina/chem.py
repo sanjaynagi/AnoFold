@@ -1,7 +1,46 @@
 import numpy as np
-import pandas as pd
+
 from rdkit import Chem
+import rdkit.Chem.rdFMCS as rdFMCS
+
 from .utils import pdb_to_pandas
+
+
+
+def calculate_rmsd_matrix(poses):
+    """Calculate RMSD matrix for all pose pairs."""
+    import math
+    size = len(poses)
+    rmsd_matrix = np.zeros((size, size))
+    
+    for i, mol in enumerate(poses):
+        for j, jmol in enumerate(poses):
+            # MCS identification between reference pose and target pose
+            r = rdFMCS.FindMCS([mol, jmol])
+            # Atom map for reference and target
+            a = mol.GetSubstructMatch(Chem.MolFromSmarts(r.smartsString))
+            b = jmol.GetSubstructMatch(Chem.MolFromSmarts(r.smartsString))
+            # Atom map generation
+            amap = list(zip(a, b))
+
+            # Calculate RMSD
+            # distance calculation per atom pair
+            distances=[]
+            for atomA, atomB in amap:
+                pos_A=mol.GetConformer().GetAtomPosition (atomA)
+                pos_B=jmol.GetConformer().GetAtomPosition (atomB)
+                coord_A=np.array((pos_A.x,pos_A.y,pos_A.z))
+                coord_B=np.array ((pos_B.x,pos_B.y,pos_B.z))
+                dist_numpy = np.linalg.norm(coord_A-coord_B)
+                distances.append(dist_numpy)
+    
+            # This is the RMSD formula from wikipedia
+            rmsd=math.sqrt(1/len(distances)*sum([i*i for i in distances]))
+    
+            #saving the rmsd values to a matrix and a table for clustering
+            rmsd_matrix[i ,j]=rmsd
+    
+    return rmsd_matrix
 
 
 def calculate_distances(receptor_path, ligand_path, residue_number, catalytic_molecule):
@@ -45,6 +84,7 @@ def calculate_distances(receptor_path, ligand_path, residue_number, catalytic_mo
         distances.append(distance)
     
     return distances
+
 
 
 def find_ester_bond(mol):

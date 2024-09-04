@@ -10,7 +10,7 @@ from rdkit.Chem import rdFMCS
 
 from .utils import pdb_to_residue_number
 from .chem import calculate_distances
-from .plot import plot_dendrogram, plot_heatmap, _concat_subplots
+from .plot import _view_3d, plot_dendrogram, plot_heatmap, _concat_subplots
 
 class Docked:
     def __init__(self, gene_id, ligand, wkdir="../", active_site_motif="[LIV].G.S.G", catalytic_codon_in_motif=4, catalytic_molecule="OG"):
@@ -126,30 +126,14 @@ class Docked:
 
         return fig
 
-    def view_3d(self, receptor_highlight=None, sticks=False):
-        v = py3Dmol.view()
-        v.addModel(open(self.receptor_path).read())
-        if sticks:
-            v.setStyle({'cartoon':{},'stick':{'radius':.1}})
-        else:
-            v.setStyle({'cartoon':{}})
-        if receptor_highlight:
-            for i in range(receptor_highlight-3, receptor_highlight+3):
-                v.setStyle({'model': -1, 'serial': i}, {"cartoon": {'color': 'yellow'}, 'stick':{'radius':.3, 'color':'yellow'}})
-        v.addModel(open(self.ligand_path).read())
-        v.setStyle({'model':1},{'stick':{'colorscheme':'dimgrayCarbon','radius':.125}})
-        v.addModelsAsFrames(open(self.docked_path).read())
-        v.setStyle({'model':2},{'stick':{'colorscheme':'greenCarbon'}})
-        v.zoomTo({'model':1})
-        v.rotate(90)
-        v.animate({'interval':5000})
-        return v
+    def view_3d(self, **kwargs):
+        return _view_3d(**kwargs)
     
     def cluster_poses(self, width=1000, height=500):
         """Analyze poses and create visualizations."""
         from scipy.spatial.distance import squareform
         # Load poses
-        poses = self.load_poses(self.docked_path)
+        poses = self.load_poses()
         
         # Calculate RMSD matrix
         rmsd_matrix = self.calculate_rmsd_matrix(poses)
