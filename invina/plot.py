@@ -3,24 +3,106 @@ import numpy as np
 import pandas as pd
 import py3Dmol
 
-def _view_3d(self, receptor_highlight=None, sticks=False):
+
+def _view_3d(
+    receptor_path,
+    ligand_path=None,
+    docked_path=None,
+    receptor_highlight=None,
+    style="cartoon",
+    surface=False,
+    surface_opacity=0.8,
+    surface_color="white",
+    highlight_color="yellow",
+    stick_radius=0.1,
+    zoom_ligand=True,
+    rotate_degree=90,
+    animation_interval=5000,
+):
+    """
+    Enhanced 3D viewer for protein structures with optional ligand and docking results.
+
+    Parameters:
+    - receptor_path (str): Path to the receptor PDB file
+    - ligand_path (str, optional): Path to the ligand PDB file
+    - docked_path (str, optional): Path to the docked pose PDB file
+    - receptor_highlight (int, optional): Residue number to highlight in the receptor
+    - style (str): Style for receptor visualization ('cartoon', 'stick', 'sphere', or 'line')
+    - surface (bool): Whether to show the protein surface
+    - surface_opacity (float): Opacity of the surface (0.0 to 1.0)
+    - surface_color (str): Color of the surface
+    - highlight_color (str): Color for highlighted residues
+    - stick_radius (float): Radius for stick representation
+    - zoom_ligand (bool): Whether to zoom to the ligand
+    - rotate_degree (int): Degrees to rotate the view
+    - animation_interval (int): Interval for animation in milliseconds
+
+    Returns:
+    - py3Dmol.view: The 3D view object
+    """
     v = py3Dmol.view()
-    v.addModel(open(self.receptor_path).read())
-    if sticks:
-        v.setStyle({'cartoon':{},'stick':{'radius':.1}})
-    else:
-        v.setStyle({'cartoon':{}})
+
+    # Add receptor
+    v.addModel(open(receptor_path).read())
+
+    # Set receptor style
+    style_dict = {style: {}}
+    if style == "stick":
+        style_dict["stick"]["radius"] = stick_radius
+    v.setStyle({"model": -1}, style_dict)
+
+    # Add surface if requested
+    if surface:
+        v.addSurface(py3Dmol.VDW, {"opacity": surface_opacity, "color": surface_color})
+
+    # Highlight receptor residues if specified
     if receptor_highlight:
-        for i in range(receptor_highlight-3, receptor_highlight+3):
-            v.setStyle({'model': -1, 'serial': i}, {"cartoon": {'color': 'yellow'}, 'stick':{'radius':.3, 'color':'yellow'}})
-    v.addModel(open(self.ligand_path).read())
-    v.setStyle({'model':1},{'stick':{'colorscheme':'dimgrayCarbon','radius':.125}})
-    v.addModelsAsFrames(open(self.docked_path).read())
-    v.setStyle({'model':2},{'stick':{'colorscheme':'greenCarbon'}})
-    v.zoomTo({'model':1})
-    v.rotate(90)
-    v.animate({'interval':5000})
+        for i in range(receptor_highlight - 3, receptor_highlight + 4):
+            v.setStyle(
+                {"model": -1, "resi": i},
+                {
+                    style: {"color": highlight_color},
+                    "stick": {"radius": stick_radius * 2, "color": highlight_color},
+                },
+            )
+
+    # Add ligand if provided
+    if ligand_path:
+        v.addModel(open(ligand_path).read())
+        v.setStyle(
+            {"model": -2},
+            {"stick": {"colorscheme": "dimgrayCarbon", "radius": stick_radius * 1.25}},
+        )
+
+    # Add docked poses if provided
+    if docked_path:
+        v.addModelsAsFrames(open(docked_path).read())
+        v.setStyle(
+            {"model": -3},
+            {"stick": {"colorscheme": "greenCarbon", "radius": stick_radius * 1.25}},
+        )
+
+    # Set view
+    if zoom_ligand and ligand_path:
+        v.zoomTo({"model": -2})
+    else:
+        v.zoomTo()
+
+    v.rotate(rotate_degree)
+
+    # Set animation if multiple models are present
+    if ligand_path or docked_path:
+        v.animate({"interval": animation_interval})
+
     return v
+
+
+# Example usage:
+# view = view_3d('receptor.pdb', 'ligand.pdb', 'docked.pdb',
+#                receptor_highlight=100, style='cartoon', surface=True,
+#                surface_opacity=0.5, surface_color='skyblue')
+# view.show()
+
 
 def plot_dendrogram(
     dist,
@@ -32,16 +114,15 @@ def plot_dendrogram(
     count_sort=True,
     distance_sort=False,
     line_width=0.5,
-    line_color='black',
+    line_color="black",
     marker_size=15,
-    leaf_color='CNN_score',
-    render_mode='svg',
+    leaf_color="CNN_score",
+    render_mode="svg",
     leaf_y=0,
     leaf_color_discrete_map=None,
     leaf_category_orders=None,
-    template='simple_white',
+    template="simple_white",
 ):
-
     import plotly.express as px
     import scipy.cluster.hierarchy as sch
 
@@ -92,7 +173,7 @@ def plot_dendrogram(
                 y=np.repeat(leaf_y, n_leaves),
                 color=leaf_color,
                 render_mode=render_mode,
-                hover_name='Mode',
+                hover_name="Mode",
                 hover_data=leaf_data.columns.to_list(),
                 template=template,
                 color_discrete_map=leaf_color_discrete_map,
@@ -123,50 +204,50 @@ def plot_dendrogram(
 
     return fig, leaf_data
 
+
 def plot_heatmap(df_rmsd, leaf_data):
     """Create an interactive heatmap using Plotly."""
-    pose_order = leaf_data['Mode'].to_numpy() - 1
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=df_rmsd,
-        x=np.arange(len(pose_order)),
-        y=np.arange(len(pose_order)),
-        colorscale='Viridis',
-        showscale=False
-    ))
+    pose_order = leaf_data["Mode"].to_numpy() - 1
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=df_rmsd,
+            x=np.arange(len(pose_order)),
+            y=np.arange(len(pose_order)),
+            colorscale="Viridis",
+            showscale=False,
+        )
+    )
 
     return fig
 
+
 def _concat_subplots(
-        figures,
-        width,
-        height,
-    ):
-        from plotly.subplots import make_subplots  # type: ignore
-        # make subplots
-        fig = make_subplots(
-            rows=2,
-            cols=1,
-            vertical_spacing=0.05,
-            shared_xaxes=True
-        )
+    figures,
+    width,
+    height,
+):
+    from plotly.subplots import make_subplots  # type: ignore
 
-        for i, figure in enumerate(figures):
-            if isinstance(figure, go.Figure):
-                # This is a figure, access the traces within it.
-                for trace in range(len(figure["data"])):
-                    fig.append_trace(figure["data"][trace], row=i+1, col=1)
-            else:
-                # Assume this is a trace, add directly.
-                fig.append_trace(figure, row=i+1, col=1)
+    # make subplots
+    fig = make_subplots(rows=2, cols=1, vertical_spacing=0.05, shared_xaxes=True)
 
-        fig.update_xaxes(visible=False)
-        fig.update_layout(
-            width=width,
-            height=height,
-            hovermode="closest",
-            plot_bgcolor="white",
-        )
-        fig.update(layout_coloraxis_showscale=False)
+    for i, figure in enumerate(figures):
+        if isinstance(figure, go.Figure):
+            # This is a figure, access the traces within it.
+            for trace in range(len(figure["data"])):
+                fig.append_trace(figure["data"][trace], row=i + 1, col=1)
+        else:
+            # Assume this is a trace, add directly.
+            fig.append_trace(figure, row=i + 1, col=1)
 
-        return fig
+    fig.update_xaxes(visible=False)
+    fig.update_layout(
+        width=width,
+        height=height,
+        hovermode="closest",
+        plot_bgcolor="white",
+    )
+    fig.update(layout_coloraxis_showscale=False)
+
+    return fig
