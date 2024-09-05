@@ -115,7 +115,7 @@ def pdb_to_active_site_coords(
 
 def download_ligand(
     ligand_name,
-    repo_url="https://raw.githubusercontent.com/sanjaynagi/invina/main/ligands/raw",
+    repo_url="https://raw.githubusercontent.com/sanjaynagi/imove/main/ligands/raw",
     save_path="ligands",
 ):
     os.makedirs(save_path, exist_ok=True)
@@ -146,7 +146,7 @@ def download_ligand(
 def download_and_prepare_ligand(
     ligand_name,
     save_path,
-    repo_url="https://raw.githubusercontent.com/sanjaynagi/invina/main/ligands/raw",
+    repo_url="https://raw.githubusercontent.com/sanjaynagi/imove/main/ligands/raw",
     pH=7.4,
 ):
     """

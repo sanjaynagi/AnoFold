@@ -4,7 +4,6 @@ import pickle
 import pandas as pd
 import numpy as np
 
-import py3Dmol
 from rdkit import Chem
 from rdkit.Chem import rdFMCS
 
@@ -35,7 +34,7 @@ class Docked:
         
         residue_number = pdb_to_residue_number(receptor_path=self.receptor_path, active_site_motif=self.active_site_motif, catalytic_codon_in_motif=self.catalytic_codon_in_motif)
         # Calculate distances
-        distances = calculate_distances(receptor_path=self.receptor_path, ligand_path=self.ligand_path, residue_number=residue_number, catalytic_molecule=self.catalytic_molecule)
+        distances = calculate_distances(receptor_path=self.receptor_path, docked_path=self.docked_path, residue_number=residue_number, catalytic_molecule=self.catalytic_molecule)
 
         # Read gnina log file
         with open(self.log_path, 'r') as f:
