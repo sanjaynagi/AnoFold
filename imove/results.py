@@ -12,14 +12,19 @@ from .chem import calculate_distances
 from .plot import _view_3d, plot_dendrogram, plot_heatmap, _concat_subplots
 
 class Docked:
-    def __init__(self, gene_id, ligand, wkdir="../", active_site_motif="[LIV].G.S.G", catalytic_codon_in_motif=4, catalytic_molecule="OG"):
+    def __init__(self, gene_id, ligand, wkdir="../", active_site_motif="[LIV].G.S.G", catalytic_codon_in_motif=4, catalytic_molecule="OG", mutagenesis_dict=None):  
         self.gene_id = gene_id
         self.ligand = ligand
 
-        self.receptor_path = os.path.join(wkdir, f"receptors/{gene_id}.pdb")
+        if mutagenesis_dict:
+            mut_str = "_".join([f"{k}{v}" for k, v in mutagenesis_dict.items()])
+        else:
+            mut_str = ""
+
+        self.receptor_path = os.path.join(wkdir, f"receptors/{gene_id}{mut_str}.pdbqt")
         self.ligand_path = os.path.join(wkdir, f"ligands/{ligand}.pdbqt")
-        self.docked_path = os.path.join(wkdir, f"docked/{gene_id}_{ligand}.sdf")
-        self.log_path = os.path.join(wkdir, f"logs/{gene_id}_{ligand}.log")
+        self.docked_path = os.path.join(wkdir, f"docked/{gene_id}{mut_str}_{ligand}.sdf")
+        self.log_path = os.path.join(wkdir, f"logs/{gene_id}{mut_str}_{ligand}.log")
 
         self.active_site_motif = active_site_motif
         self.catalytic_codon_in_motif = catalytic_codon_in_motif
