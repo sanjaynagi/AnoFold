@@ -17,7 +17,7 @@ class Docked:
         self.ligand = ligand
 
         if mutagenesis_dict:
-            mut_str = "_".join([f"{k}{v}" for k, v in mutagenesis_dict.items()])
+            mut_str = "_" + "_".join([f"{k}{v}" for k, v in mutagenesis_dict.items()])
         else:
             mut_str = ""
 
