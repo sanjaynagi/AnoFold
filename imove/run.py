@@ -44,7 +44,7 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
         active_site_motif, catalytic_molecule, catalytic_codon_in_motif = override_motif
         log(f"Using provided override motif - active site motif: {active_site_motif}, catalytic molecule: {catalytic_molecule}, catalytic codon in motif: {catalytic_codon_in_motif}")
     else:
-        active_site_motif, catalytic_molecule, catalytic_codon_in_motif = generate_motifs(gene_id=gene_id, 
+        active_site_motif, catalytic_molecule, catalytic_codon_in_motif = generate_motifs(gene_id=gene_id, wkdir=wkdir,
                                                                                           override_desc=override_desc)
         log(f"Generated motifs - active site motif: {active_site_motif}, catalytic molecule: {catalytic_molecule}, catalytic codon in motif: {catalytic_codon_in_motif}")
 

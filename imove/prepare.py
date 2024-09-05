@@ -189,7 +189,7 @@ def pdb_to_active_site_coords(
     return results
 
 
-def generate_motifs(gene_id, override_desc):
+def generate_motifs(gene_id, wkdir, override_desc):
     gene_data = get_uniprot_data(gene_id)
     gene_desc = gene_data["protein_name"]
     gene_name = gene_data["gene_name"]
@@ -203,7 +203,7 @@ def generate_motifs(gene_id, override_desc):
     elif "ester hydrolase" in gene_desc or "Carboxylesterase" in gene_desc:
         return ("[LIV].G.S.G", "OG", 4)
     elif "glutathione transferase" in gene_desc:
-        df_motif = pd.read_csv("../AgamP4_gst_motifs.csv").set_index("GeneID")
+        df_motif = pd.read_csv(f"{wkdir}/resources/AgamP4_gst_motifs.csv").set_index("GeneID")
         motif = df_motif.loc[gene_id, "motif"]
         return (motif, "O", 4)
     else:
