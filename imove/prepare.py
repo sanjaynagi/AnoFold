@@ -197,7 +197,7 @@ def generate_motifs(gene_id, wkdir, override_desc):
     if override_desc:
         gene_desc = override_desc
 
-    print(f"Running molecular docking for {gene_id} | {gene_name} ({gene_desc})")
+    print(f"Uniprot info: {gene_id} | {gene_name} ({gene_desc})")
     if "P450" in gene_desc:
         return ("blah", "C", 3)
     elif "ester hydrolase" in gene_desc or "Carboxylesterase" in gene_desc:
