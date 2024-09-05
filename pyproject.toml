@@ -1,15 +1,15 @@
 [tool.poetry]
-name = "invina"
+name = "imove"
 version = "0.0.0"
 description = "A package to perform inverse molecular docking of ligands with vector enzymes using gnina"
 readme = "README.md"
-documentation = "https://sanjaynagi.github.io/invina/"
-repository = "https://github.com/sanjaynagi/invina"
+documentation = "https://sanjaynagi.github.io/imove/"
+repository = "https://github.com/sanjaynagi/imove"
 authors = [
     "Sanjay Nagi <sanjay.nagi@lstmed.ac.uk>",
     ]
 packages = [
-    { include = "invina" }
+    { include = "imove" }
 ]
 license = "MIT"
 

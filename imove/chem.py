@@ -42,7 +42,7 @@ def calculate_rmsd_matrix(poses):
     return rmsd_matrix
 
 
-def calculate_distances(receptor_path, ligand_path, residue_number, catalytic_molecule):
+def calculate_distances(receptor_path, docked_path, residue_number, catalytic_molecule):
     # Load the protein structure using our pandas loader
     receptor_df = pdb_to_pandas(receptor_path)
     # Find the specific atom in the protein
@@ -65,7 +65,7 @@ def calculate_distances(receptor_path, ligand_path, residue_number, catalytic_mo
     )
 
     # Load the ligand with all conformations
-    suppl = Chem.SDMolSupplier(ligand_path, removeHs=False)
+    suppl = Chem.SDMolSupplier(docked_path, removeHs=False)
 
     distances = []
     for mol in suppl:

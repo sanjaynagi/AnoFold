@@ -1,0 +1,6 @@
+docked/
+logs/
+receptors/
+__pycache__*
+*mol2*
+ligands/*sdf
