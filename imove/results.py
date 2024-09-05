@@ -25,6 +25,7 @@ class Docked:
         self.ligand_path = os.path.join(wkdir, f"ligands/{ligand}.pdbqt")
         self.docked_path = os.path.join(wkdir, f"docked/{gene_id}{mut_str}_{ligand}.sdf")
         self.log_path = os.path.join(wkdir, f"logs/{gene_id}{mut_str}_{ligand}.log")
+        self.mut_str = mut_str
 
         self.active_site_motif = active_site_motif
         self.catalytic_codon_in_motif = catalytic_codon_in_motif
@@ -194,7 +195,8 @@ class Docked:
             return f"MolecularDockingResults(gene_id='{self.gene_id}', ligand='{self.ligand}')"
 
     def _repr_html_(self):
-        html = f"<h3>Molecular Docking Results for {self.gene_id} with {self.ligand}</h3>"
+        
+        html = f"<h3>Molecular Docking Results for {self.gene_id} {self.mut_str[1:].replace('_', ',')} with {self.ligand}</h3>"
         html += self.df.to_html()
         # html += "<h4>Docking Scores Plot</h4>"
         # html += self.plot_results().to_html(full_html=False, include_plotlyjs='cdn')
