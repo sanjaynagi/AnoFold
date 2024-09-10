@@ -121,49 +121,6 @@ def pdb_to_residue_number(receptor_path, active_site_motif, catalytic_codon_in_m
     return target_idx
 
 
-def get_uniprot_data(gene_id):
-    uniprot_acc = vectorbase_to_uniprot(gene_id)
-    if not uniprot_acc:
-        return f"No UniProt accession found for VectorBase ID: {gene_id}"
-
-    # UniProt API endpoint
-    base_url = "https://rest.uniprot.org/uniprotkb/search"
-
-    print(f"UniProt accession: {uniprot_acc}")
-
-    # Query parameters
-    params = {
-        "query": f"accession:{uniprot_acc}",
-        "format": "json",
-        "fields": "gene_names,protein_name,organism_name,go"
-    }
-
-    # Send request with retry mechanism
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(base_url, params=params)
-            response.raise_for_status()
-            data = response.json()
-
-            if data['results']:
-                result = data['results'][0]
-                return {
-                    "gene_name": result.get('genes', [{}])[0].get('geneName', {}).get('value', 'N/A'),
-                    "protein_name": result.get('proteinDescription', {}).get('recommendedName', {}).get('fullName', {}).get('value', 'N/A'),
-                    "organism": result.get('organism', {}).get('scientificName', 'N/A'),
-                    "function": next((comment['texts'][0]['value'] for comment in result.get('comments', []) if comment['commentType'] == 'FUNCTION'), 'N/A'),
-                    "go_terms": [go['id'] for go in result.get('goTerms', [])],
-                }
-            else:
-                return f"No data found for UniProt accession: {uniprot_acc}"
-
-        except requests.exceptions.RequestException as e:
-            if attempt == max_retries - 1:
-                return f"Error retrieving data: {str(e)}"
-            time.sleep(2 ** attempt)  # Exponential backoff
-
-    return "Max retries reached. Unable to retrieve data."
 
 def vectorbase_to_uniprot(gene_id):
     url = "https://rest.uniprot.org/idmapping/run"
@@ -190,9 +147,65 @@ def vectorbase_to_uniprot(gene_id):
     results_url = f"https://rest.uniprot.org/idmapping/stream/{job_id}"
     results_response = requests.get(results_url)
     results_response.raise_for_status()
-    results = results_response.json()
+    results = results_response.json()['results']
 
-    if "results" in results and results["results"]:
-        return results["results"][0]["to"]
+    # if multiple transcripts, choose the longest
+    lens = {}
+    if len(results) > 1:
+        for entry in results:
+            gene_data = get_uniprot_data(entry['to'], vectorbase=False)
+            lens[entry['to']] = gene_data['length']
+
+        max_key = max(lens, key=lens.get)
+        print(f"selecting longest transcript for gene_id: {gene_id}, {max_key} : {lens[max_key]}")
+        return max_key
     else:
-        return None
+        return results[0]["to"]
+
+
+def get_uniprot_data(gene_id, vectorbase=True):
+    if vectorbase:
+        uniprot_acc = vectorbase_to_uniprot(gene_id)
+    else:
+        uniprot_acc = gene_id
+    if not uniprot_acc:
+        return f"No UniProt accession found for VectorBase ID: {gene_id}"
+
+    # UniProt API endpoint
+    base_url = "https://rest.uniprot.org/uniprotkb/search"
+
+    print(f"UniProt accession: {uniprot_acc}")
+
+    # Query parameters
+    params = {
+        "query": f"accession:{uniprot_acc}",
+        "format": "json",
+        "fields": "gene_names,protein_name,organism_name,go, sequence"
+    }
+
+    # Send request with retry mechanism
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(base_url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            if data['results']:
+                result = data['results'][0]
+                return {
+                    "gene_name": result.get('genes', [{}])[0].get('geneName', {}).get('value', 'N/A'),
+                    "protein_name": result.get('proteinDescription', {}).get('recommendedName', {}).get('fullName', {}).get('value', 'N/A'),
+                    "organism": result.get('organism', {}).get('scientificName', 'N/A'),
+                    "function": next((comment['texts'][0]['value'] for comment in result.get('comments', []) if comment['commentType'] == 'FUNCTION'), 'N/A'),
+                    "go_terms": [go['id'] for go in result.get('goTerms', [])],
+                    "length": result.get('sequence', {}).get('length', 'N/A')  # Added this line to get the length
+                }
+            else:
+                return f"No data found for UniProt accession: {uniprot_acc}"
+
+        except requests.exceptions.RequestException as e:
+            if attempt == max_retries - 1:
+                return f"Error retrieving data: {str(e)}"
+            time.sleep(2 ** attempt)  # Exponential backoff
+
+    return "Max retries reached. Unable to retrieve data."

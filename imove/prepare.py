@@ -272,7 +272,7 @@ def download_ref_pdb(pdb_id='1TQN', save_dir='.'):
         print(f"Error downloading {pdb_id}.pdb: {e}")
         return None
     
-def copy_heme_to_p450(reference_pdb_path, my_pdb_path, output_pdb_path=None):
+def copy_heme_to_p450(reference_pdb_path, my_pdb_path, receptor_with_heme_out_path=None):
     """
     Copy all HEM-related coordinates from a reference PDB to a P450 PDB file.
     
@@ -309,7 +309,7 @@ def copy_heme_to_p450(reference_pdb_path, my_pdb_path, output_pdb_path=None):
     p450_lines[insert_index:insert_index] = hem_lines
 
     # Write the modified content to a new file or overwrite the existing one
-    output_path = output_pdb_path or my_pdb_path
+    output_path = receptor_with_heme_out_path or my_pdb_path
     with open(output_path, 'w') as output_file:
         output_file.writelines(p450_lines)
 
@@ -357,5 +357,5 @@ def add_heme_to_p450(receptor_path, receptor_with_heme_out_path, ref_pdb_id="1TQ
     finally:
         os.remove(script_path)
 
-    final_path = copy_heme_to_p450(reference_pdb_path=ref_p450_path, receptor_with_heme_out_path=receptor_with_heme_out_path)
+    final_path = copy_heme_to_p450(reference_pdb_path=ref_p450_path, my_pdb_path=receptor_path, receptor_with_heme_out_path=receptor_with_heme_out_path)
     return final_path
