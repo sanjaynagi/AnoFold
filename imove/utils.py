@@ -12,6 +12,30 @@ amino_acid_map = {
     'SER': 'S', 'THR': 'T', 'TRP': 'W', 'TYR': 'Y', 'VAL': 'V'
     }
 
+def log(message, verbose=False):
+    if verbose:
+        print(message)
+
+def prepare_folders(wkdir, gene_id, ligand, mut_str):
+    import os
+
+    pdb_path = os.path.join(wkdir, f"receptors/{gene_id}{mut_str}.pdbqt")
+    ligand_path = os.path.join(wkdir, f"ligands/{ligand}.pdbqt")
+    receptors_save_path = os.path.join(wkdir, "receptors/")
+    ligand_save_path = os.path.join(wkdir, "ligands/")
+    docked_folder_path = os.path.join(wkdir, "docked/")
+    logs_folder_path = os.path.join(wkdir, "logs/")
+
+    parent_dir = os.path.abspath(os.path.join(wkdir, os.pardir))
+    if (os.path.exists(os.path.join(parent_dir, "docked")) and 
+            os.path.exists(os.path.join(parent_dir, "logs"))):
+        raise ValueError("There are docked and log directories in the parent directory of your specified working directory. "
+                         "Are you sure you have specified the correct working directory?")
+    
+    os.makedirs(docked_folder_path, exist_ok=True)
+    os.makedirs(logs_folder_path, exist_ok=True)
+    return pdb_path, ligand_path, receptors_save_path, ligand_save_path, docked_folder_path, logs_folder_path
+
 
 def parse_pdb(file_path):
     columns = ['record_type', 'atom_number', 'atom_name', 'alt_loc', 'residue_name', 'chain_id', 

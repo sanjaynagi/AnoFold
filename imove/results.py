@@ -132,7 +132,7 @@ class Docked:
         return fig
 
     def view_3d(self, **kwargs):
-        return _view_3d(**kwargs)
+        return _view_3d(self.receptor_path, **kwargs)
     
     def cluster_poses(self, width=1000, height=500):
         """Analyze poses and create visualizations."""

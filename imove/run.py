@@ -1,64 +1,57 @@
 import os
 import subprocess
-from .prepare import download_and_prepare_ligand, download_and_prepare_alphafold_pdb, generate_motifs, pdb_to_active_site_coords
+from .utils import prepare_folders, log
+from .prepare import (
+    download_and_prepare_ligand, 
+    download_and_prepare_alphafold_pdb, 
+    generate_motifs, 
+    pdb_to_active_site_coords,
+    pdb_to_heme_coords
+)
 from .results import Docked
 
-def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_dict= None, wkdir="../", verbose=False):
-    def log(message):
-        if verbose:
-            print(message)
+def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_dict=None, wkdir="../", verbose=False, box_size=20, p450=False):
 
-    log(f"Starting docking process for gene_id: {gene_id}, ligand: {ligand}")
+    log(f"Starting docking process for gene_id: {gene_id}, ligand: {ligand}", verbose=verbose)
+    pdb_path, ligand_path, receptors_save_path, ligand_save_path, docked_folder_path, logs_folder_path = prepare_folders(wkdir, gene_id, ligand, mut_str)
 
     if mutagenesis_dict:
         mut_str = "_" + '_'.join([str(key) + value for key, value in mutagenesis_dict.items()])
     else:
         mut_str = ""
 
-    pdb_path = os.path.join(wkdir, f"receptors/{gene_id}{mut_str}.pdbqt")
-    ligand_path = os.path.join(wkdir, f"ligands/{ligand}.pdbqt")
-    receptors_save_path = os.path.join(wkdir, "receptors/")
-    ligand_save_path = os.path.join(wkdir, "ligands/")
-    docked_folder_path = os.path.join(wkdir, "docked/")
-    logs_folder_path = os.path.join(wkdir, "logs/")
-
-    parent_dir = os.path.abspath(os.path.join(wkdir, os.pardir))
-    if (os.path.exists(os.path.join(parent_dir, "docked")) and 
-            os.path.exists(os.path.join(parent_dir, "logs"))):
-        raise ValueError("There are docked and log directories in the parent directory of your specified working directory. "
-                         "Are you sure you have specified the correct working directory?")
-    
-    os.makedirs(docked_folder_path, exist_ok=True)
-    os.makedirs(logs_folder_path, exist_ok=True)
-
-    log("Checking for receptor and ligand files...")
     if not os.path.exists(pdb_path):
-        log(f"Receptor file not found. Downloading and preparing AlphaFold PDB for {gene_id}")
+        log(f"Receptor file not found. Downloading and preparing AlphaFold PDB for {gene_id}", verbose=verbose)
         download_and_prepare_alphafold_pdb(gene_id, output_dir=receptors_save_path, ph=7.4, mutagenesis_dict=mutagenesis_dict)
-    
+    else:
+        log("receptor file found...", verbose=verbose)
+
     if not os.path.exists(ligand_path):
-        log(f"Ligand file not found. Downloading and preparing ligand {ligand}")
+        log(f"Ligand file not found. Downloading and preparing ligand {ligand}", verbose=verbose)
         download_and_prepare_ligand(ligand, save_path=ligand_save_path) 
 
-    if override_motif:
-        active_site_motif, catalytic_molecule, catalytic_codon_in_motif = override_motif
-        log(f"Using provided override motif - active site motif: {active_site_motif}, catalytic molecule: {catalytic_molecule}, catalytic codon in motif: {catalytic_codon_in_motif}")
-    else:
-        active_site_motif, catalytic_molecule, catalytic_codon_in_motif = generate_motifs(gene_id=gene_id, wkdir=wkdir,
-                                                                                          override_desc=override_desc)
-        log(f"Generated motifs - active site motif: {active_site_motif}, catalytic molecule: {catalytic_molecule}, catalytic codon in motif: {catalytic_codon_in_motif}")
+    if not p450:        
+        if override_motif:
+            active_site_motif, catalytic_molecule, catalytic_codon_in_motif = override_motif
+            log(f"Using provided override motif - active site motif: {active_site_motif}, catalytic molecule: {catalytic_molecule}, catalytic codon in motif: {catalytic_codon_in_motif}", verbose=verbose)
+        else:
+            active_site_motif, catalytic_molecule, catalytic_codon_in_motif = generate_motifs(gene_id=gene_id, wkdir=wkdir,
+                                                                                            override_desc=override_desc)
+            log(f"Generated motifs - active site motif: {active_site_motif}, catalytic molecule: {catalytic_molecule}, catalytic codon in motif: {catalytic_codon_in_motif}", verbose=verbose)
 
-    res = pdb_to_active_site_coords(
-        receptor_path=pdb_path,
-        active_site_motif=active_site_motif, 
-        catalytic_molecule=catalytic_molecule, 
-        catalytic_codon_in_motif=catalytic_codon_in_motif)
-    x, y, z = res[0]['coordinates']
-    log(f"Active site coordinates: x={x}, y={y}, z={z}")
+        res = pdb_to_active_site_coords(
+            receptor_path=pdb_path,
+            active_site_motif=active_site_motif, 
+            catalytic_molecule=catalytic_molecule, 
+            catalytic_codon_in_motif=catalytic_codon_in_motif)
+        x, y, z = res[0]['coordinates']
+    else:
+        x, y, z = pdb_to_heme_coords(pdb_path)
+    log(f"Active site coordinates: x={x}, y={y}, z={z}", verbose=verbose)
 
     log_path = os.path.join(logs_folder_path, f"{gene_id}{mut_str}_{ligand}.log")
     if not os.path.exists(log_path) and os.path.exists(ligand_path):
-        log("Preparing to run GNINA for docking...")
+        log("Preparing to run GNINA for docking...", verbose=verbose)
         command = [
             "./gnina",
             "-r", pdb_path,
@@ -66,9 +59,9 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
             "--center_x", str(x),
             "--center_y", str(y),
             "--center_z", str(z),
-            "--size_x", "20",
-            "--size_y", "20",
-            "--size_z", "20",
+            "--size_x", f"{box_size}",
+            "--size_y", f"{box_size}",
+            "--size_z", f"{box_size}",
             "-o", os.path.join(docked_folder_path, f"{gene_id}{mut_str}_{ligand}.sdf"),
             "--log", log_path,
             "--seed", "0"
@@ -76,7 +69,7 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
         
         subprocess.run(command, check=True)
     else:
-        log("Skipping GNINA docking: log file already exists or ligand file is missing")
+        log("Skipping GNINA docking: log file already exists or ligand file is missing", verbose=verbose)
 
     log("Docking process completed")
     return Docked(
@@ -88,3 +81,24 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
                 catalytic_molecule=catalytic_molecule, 
                 mutagenesis_dict=mutagenesis_dict
                 )
+
+
+
+def download_pdb(gene_id, verbose=False, mutagenesis_dict=None, wkdir="../", p450=False):
+
+    log(f"Downloading and preparing PDB file for gene_id: {gene_id}", verbose=verbose)
+
+    if mutagenesis_dict:
+        mut_str = "_" + '_'.join([str(key) + value for key, value in mutagenesis_dict.items()])
+    else:
+        mut_str = ""
+
+    pdb_path = os.path.join(wkdir, f"receptors/{gene_id}{mut_str}.pdbqt")
+    receptors_save_path = os.path.join(wkdir, "receptors/")
+
+    if not os.path.exists(pdb_path):
+        log(f"Receptor file not found. Downloading and preparing AlphaFold PDB for {gene_id}", verbose=verbose)
+        download_and_prepare_alphafold_pdb(gene_id, output_dir=receptors_save_path, ph=7.4, mutagenesis_dict=mutagenesis_dict, p450=p450)
+    else:
+        log("Receptor file found...", verbose=verbose)
+    
