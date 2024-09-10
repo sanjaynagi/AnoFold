@@ -110,8 +110,8 @@ def download_and_prepare_alphafold_pdb(gene_id, output_dir, ph=7.4, mutagenesis_
 
     if p450:
         # Add heme to P450 structure
-        raw_pdb_file = copy_heme_to_p450(reference_pdb_path=raw_pdb_file, p450_pdb_path=raw_pdb_file)
-
+        raw_pdb_file = add_heme_to_p450(receptor_path=raw_pdb_file, receptor_with_heme_out_path=raw_pdb_file)
+                                        
     output_file = os.path.join(output_dir, f"{gene_id}{mut_str}.pdbqt")
     # Use OpenBabel to add hydrogens
     obConversion = openbabel.OBConversion()
@@ -357,5 +357,5 @@ def add_heme_to_p450(receptor_path, receptor_with_heme_out_path, ref_pdb_id="1TQ
     finally:
         os.remove(script_path)
 
-    final_path = copy_heme_to_p450(ref_p450_path, receptor_with_heme_out_path)
+    final_path = copy_heme_to_p450(reference_pdb_path=ref_p450_path, receptor_with_heme_out_path=receptor_with_heme_out_path)
     return final_path

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "imove"
-version = "0.0.0"
+version = "0.0.0-post.37+21041d8"
 description = "A package to perform inverse molecular docking of ligands with vector enzymes using gnina"
 readme = "README.md"
 documentation = "https://sanjaynagi.github.io/imove/"
@@ -41,6 +41,6 @@ build-backend = "poetry_dynamic_versioning.backend"
 profile = "black"
 
 [tool.poetry-dynamic-versioning]
-enable = true
+enable = false
 vcs = "git"
 style = "semver"
