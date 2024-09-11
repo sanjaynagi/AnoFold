@@ -45,6 +45,10 @@ class Docked:
         else:
             residue_number = pdb_to_residue_number(receptor_path=self.receptor_path, active_site_motif=self.active_site_motif, catalytic_codon_in_motif=self.catalytic_codon_in_motif)
         
+        # load sdf 
+        from rdkit.Chem.PandasTools import LoadSDF
+        rdkit_df = LoadSDF(self.docked_sdf_path, smilesName='SMILES').sort_values('CNNscore', ascending=False)
+
         # Read gnina log file
         with open(self.log_path, 'r') as f:
             log_content = f.read()
@@ -63,7 +67,7 @@ class Docked:
                 distances = calculate_distances(receptor_path=self.receptor_path, docked_sdf_path=self.docked_sdf_path, smarts_pattern=smart, residue_number=residue_number, catalytic_molecule=self.catalytic_molecule, p450=self.p450)
                 df.loc[:, f'Distance_{smart}'] = pd.Series(distances)
         
-        return df
+        return df.assign(ROMol=rdkit_df.ROMol)
     
     def load_poses(self):
         """Load poses from an SDF file and rename them."""
