@@ -12,7 +12,7 @@ from .chem import calculate_distances
 from .plot import _view_3d, plot_dendrogram, plot_heatmap, _concat_subplots
 
 class Docked:
-    def __init__(self, gene_id, ligand, wkdir="../", active_site_motif="[LIV].G.S.G", catalytic_codon_in_motif=4, catalytic_molecule="OG", mutagenesis_dict=None):  
+    def __init__(self, gene_id, ligand, wkdir="../", active_site_motif="[LIV].G.S.G", catalytic_codon_in_motif=4, catalytic_molecule="OG", mutagenesis_dict=None, p450=False):  
         self.gene_id = gene_id
         self.ligand = ligand
 
@@ -30,6 +30,7 @@ class Docked:
         self.active_site_motif = active_site_motif
         self.catalytic_codon_in_motif = catalytic_codon_in_motif
         self.catalytic_molecule = catalytic_molecule
+        self.p450 = p450
 
         self.df = self.load_docking_results() 
         self.values = self.df.to_numpy()
@@ -38,9 +39,13 @@ class Docked:
 
     def load_docking_results(self):
         
-        residue_number = pdb_to_residue_number(receptor_path=self.receptor_path, active_site_motif=self.active_site_motif, catalytic_codon_in_motif=self.catalytic_codon_in_motif)
+        if self.p450:
+            residue_number = None
+        else:
+            residue_number = pdb_to_residue_number(receptor_path=self.receptor_path, active_site_motif=self.active_site_motif, catalytic_codon_in_motif=self.catalytic_codon_in_motif)
+        
         # Calculate distances
-        distances = calculate_distances(receptor_path=self.receptor_path, docked_path=self.docked_path, residue_number=residue_number, catalytic_molecule=self.catalytic_molecule)
+        distances = calculate_distances(receptor_path=self.receptor_path, docked_path=self.docked_path, residue_number=residue_number, catalytic_molecule=self.catalytic_molecule, p450=self.p450)
 
         # Read gnina log file
         with open(self.log_path, 'r') as f:
@@ -132,7 +137,7 @@ class Docked:
         return fig
 
     def view_3d(self, **kwargs):
-        return _view_3d(**kwargs)
+        return _view_3d(self.receptor_path, **kwargs)
     
     def cluster_poses(self, width=1000, height=500):
         """Analyze poses and create visualizations."""

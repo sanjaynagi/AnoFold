@@ -85,7 +85,7 @@ def download_and_prepare_ligand(
 
 
 
-def download_and_prepare_alphafold_pdb(gene_id, output_dir, ph=7.4, mutagenesis_dict=None):
+def download_and_prepare_alphafold_pdb(gene_id, output_dir, ph=7.4, mutagenesis_dict=None, p450=False):
     # Convert VectorBase GeneID to UniProt accession
     uniprot_accession = vectorbase_to_uniprot(gene_id)
     os.makedirs(output_dir, exist_ok=True)
@@ -108,6 +108,10 @@ def download_and_prepare_alphafold_pdb(gene_id, output_dir, ph=7.4, mutagenesis_
     if mutagenesis_dict:
         raw_pdb_file, mut_str = mutate_residue(receptor_path=raw_pdb_file, mutagenesis_dict=mutagenesis_dict)
 
+    if p450:
+        # Add heme to P450 structure
+        raw_pdb_file = add_heme_to_p450(receptor_path=raw_pdb_file, receptor_with_heme_out_path=raw_pdb_file)
+                                        
     output_file = os.path.join(output_dir, f"{gene_id}{mut_str}.pdbqt")
     # Use OpenBabel to add hydrogens
     obConversion = openbabel.OBConversion()
@@ -122,6 +126,11 @@ def download_and_prepare_alphafold_pdb(gene_id, output_dir, ph=7.4, mutagenesis_
     print(
         f"Downloaded and protonated AlphaFold PDB for {gene_id} (UniProt: {uniprot_accession}) to {output_file}"
     )
+
+def pdb_to_heme_coords(pdb_path):
+    df_pdb = pdb_to_pandas(pdb_path)
+    x,y,z = df_pdb.query("atom_name == 'FE'")[['x', 'y', 'z']].values[0]
+    return x, y, z
 
 
 def pdb_to_active_site_coords(
@@ -198,9 +207,7 @@ def generate_motifs(gene_id, wkdir, override_desc):
         gene_desc = override_desc
 
     print(f"Uniprot info: {gene_id} | {gene_name} ({gene_desc})")
-    if "P450" in gene_desc:
-        return ("blah", "C", 3)
-    elif "ester hydrolase" in gene_desc or "Carboxylesterase" in gene_desc:
+    if "ester hydrolase" in gene_desc or "Carboxylesterase" in gene_desc:
         return ("[LIV].G.S.G", "OG", 4)
     elif "glutathione transferase" in gene_desc:
         df_motif = pd.read_csv(f"{wkdir}/resources/AgamP4_gst_motifs.csv").set_index("GeneID")
@@ -208,9 +215,6 @@ def generate_motifs(gene_id, wkdir, override_desc):
         return (motif, "O", 4)
     else:
         assert f"Unknown gene family: {gene_desc}, custom motif required"
-
-
-
 
 
 def mutate_residue(receptor_path, mutagenesis_dict, pack_radius = 1):
@@ -239,3 +243,119 @@ def mutate_residue(receptor_path, mutagenesis_dict, pack_radius = 1):
     print(f"Mutagenesis complete. New structure saved as '{pdb_mutant_path}'")
 
     return pdb_mutant_path, mut_str
+
+
+
+
+def download_ref_pdb(pdb_id='1TQN', save_dir='.'):
+    """
+    Download a PDB file from the RCSB PDB database.
+    
+    Args:
+    pdb_id (str): The 4-character PDB ID of the structure to download.
+    save_dir (str): The directory to save the downloaded file. Defaults to the current directory.
+    
+    Returns:
+    str: The path to the downloaded file if successful, None otherwise.
+    """
+    url = f"https://files.rcsb.org/download/{pdb_id.upper()}.pdb"
+    os.makedirs(save_dir, exist_ok=True)
+    file_path = os.path.join(save_dir, f"{pdb_id}.pdb")
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        with open(file_path, 'wb') as file:
+            file.write(response.content)
+        print(f"Successfully downloaded {pdb_id}.pdb to {file_path}")
+        return file_path
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading {pdb_id}.pdb: {e}")
+        return None
+    
+def copy_heme_to_p450(reference_pdb_path, my_pdb_path, receptor_with_heme_out_path=None):
+    """
+    Copy all HEM-related coordinates from a reference PDB to a P450 PDB file.
+    
+    Args:
+    reference_pdb_path (str): Path to the reference PDB file containing the heme.
+    p450_pdb_path (str): Path to the P450 PDB file to modify.
+    output_pdb_path (str, optional): Path to save the modified P450 PDB file. If None, overwrites the input file.
+    
+    Returns:
+    str: The path to the output PDB file.
+    """
+    # Read all HEM lines from the reference PDB
+    hem_lines = []
+    with open(reference_pdb_path, 'r') as ref_file:
+        for line in ref_file:
+            if line.startswith("HETATM") and "HEM" in line:
+                hem_lines.append(line)
+    
+    if not hem_lines:
+        raise ValueError("No HEM atoms found in the reference PDB file")
+
+    # Read the P450 PDB file
+    with open(my_pdb_path, 'r') as p450_file:
+        p450_lines = p450_file.readlines()
+
+    # Find the insertion point (before the last TER or END line)
+    insert_index = len(p450_lines)
+    for i in range(len(p450_lines) - 1, -1, -1):
+        if p450_lines[i].strip().startswith(("TER", "END")):
+            insert_index = i
+            break
+
+    # Insert all HEM lines
+    p450_lines[insert_index:insert_index] = hem_lines
+
+    # Write the modified content to a new file or overwrite the existing one
+    output_path = receptor_with_heme_out_path or my_pdb_path
+    with open(output_path, 'w') as output_file:
+        output_file.writelines(p450_lines)
+
+    print(f"HEM coordinates inserted successfully. Output written to {output_path}")
+    print(f"Number of HEM lines inserted: {len(hem_lines)}")
+    return output_path
+
+
+def add_heme_to_p450(receptor_path, receptor_with_heme_out_path, ref_pdb_id="1TQN"):
+    """
+    Add heme to a P450 structure using ChimeraX and manual coordinate insertion.
+    
+    Args:
+    receptor_path (str): Path to the input P450 PDB file.
+    receptor_with_heme_path (str): Path to save the P450 with added heme.
+    ref_pdb_id (str): PDB ID of the reference structure (default: "1TQN").
+    
+    Returns:
+    str: Path to the final P450 PDB file with heme added.
+    """
+    import subprocess
+    ref_p450_path = download_ref_pdb(ref_pdb_id)
+    if not ref_p450_path:
+        raise ValueError(f"Failed to download reference PDB {ref_pdb_id}")
+
+    chimerax_script = f"""
+    open {receptor_path}
+    open {ref_p450_path}
+    match #1 to #2
+    close #2
+    save {receptor_with_heme_out_path} models #1
+    exit
+    """
+
+    script_path = "temp_chimerax_script.cxc"
+    with open(script_path, "w") as script_file:
+        script_file.write(chimerax_script)
+
+    try:
+        subprocess.run(["chimerax", "--nogui", script_path], check=True)
+        print(f"ChimeraX alignment completed. Result saved to {receptor_with_heme_out_path}")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while running ChimeraX: {str(e)}")
+        raise
+    finally:
+        os.remove(script_path)
+
+    final_path = copy_heme_to_p450(reference_pdb_path=ref_p450_path, my_pdb_path=receptor_path, receptor_with_heme_out_path=receptor_with_heme_out_path)
+    return final_path

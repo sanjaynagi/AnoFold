@@ -1,4 +1,4 @@
-from .run import dock
+from .run import dock, download_pdb
 from .results import Docked
 from .plot import _concat_subplots, _view_3d
 from .chem import *
