@@ -12,7 +12,7 @@ from .chem import calculate_distances
 from .plot import _view_3d, plot_dendrogram, plot_heatmap, _concat_subplots
 
 class Docked:
-    def __init__(self, gene_id, ligand, wkdir="../", active_site_motif="[LIV].G.S.G", catalytic_codon_in_motif=4, catalytic_molecule="OG", mutagenesis_dict=None, p450=False):  
+    def __init__(self, gene_id, ligand, smarts_for_distance, wkdir="../", active_site_motif="[LIV].G.S.G", catalytic_codon_in_motif=4, catalytic_molecule="OG", mutagenesis_dict=None, p450=False):  
         self.gene_id = gene_id
         self.ligand = ligand
 
@@ -23,10 +23,11 @@ class Docked:
 
         self.receptor_path = os.path.join(wkdir, f"receptors/{gene_id}{mut_str}.pdbqt")
         self.ligand_path = os.path.join(wkdir, f"ligands/{ligand}.pdbqt")
-        self.docked_path = os.path.join(wkdir, f"docked/{gene_id}{mut_str}_{ligand}.sdf")
+        self.docked_sdf_path = os.path.join(wkdir, f"docked/{gene_id}{mut_str}_{ligand}.sdf")
         self.log_path = os.path.join(wkdir, f"logs/{gene_id}{mut_str}_{ligand}.log")
         self.mut_str = mut_str
 
+        self.smarts_for_distance = smarts_for_distance
         self.active_site_motif = active_site_motif
         self.catalytic_codon_in_motif = catalytic_codon_in_motif
         self.catalytic_molecule = catalytic_molecule
@@ -44,9 +45,6 @@ class Docked:
         else:
             residue_number = pdb_to_residue_number(receptor_path=self.receptor_path, active_site_motif=self.active_site_motif, catalytic_codon_in_motif=self.catalytic_codon_in_motif)
         
-        # Calculate distances
-        distances = calculate_distances(receptor_path=self.receptor_path, docked_path=self.docked_path, residue_number=residue_number, catalytic_molecule=self.catalytic_molecule, p450=self.p450)
-
         # Read gnina log file
         with open(self.log_path, 'r') as f:
             log_content = f.read()
@@ -59,16 +57,17 @@ class Docked:
         df = pd.DataFrame(docking_results, columns=['Mode', 'Affinity', 'Intramol', 'CNN_score', 'CNN_affinity'])
         df = df.astype({'Mode': int, 'Affinity': float, 'Intramol': float, 'CNN_score': float, 'CNN_affinity': float})
         
-        # Add distances
-        df['Distance'] = pd.Series(distances)
+        # Calculate distances
+        if isinstance(self.smarts_for_distance, str):
+            for smart in self.smarts_for_distance:
+                distances = calculate_distances(receptor_path=self.receptor_path, docked_sdf_path=self.docked_sdf_path, smarts_pattern=smart, residue_number=residue_number, catalytic_molecule=self.catalytic_molecule, p450=self.p450)
+                df.loc[:, f'Distance_{smart}'] = pd.Series(distances)
         
-        # Reorder columns
-        df = df[['Mode', 'Affinity', 'Intramol', 'CNN_score', 'CNN_affinity', 'Distance']]
         return df
     
     def load_poses(self):
         """Load poses from an SDF file and rename them."""
-        poses = Chem.SDMolSupplier(self.docked_path)
+        poses = Chem.SDMolSupplier(self.docked_sdf_path)
         renamed_poses = []
         for index, p in enumerate(poses):
             if p is not None:
