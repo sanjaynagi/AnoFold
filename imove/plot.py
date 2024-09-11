@@ -7,7 +7,7 @@ import py3Dmol
 def _view_3d(
     receptor_path,
     ligand_path=None,
-    docked_path=None,
+    docked_sdf_path=None,
     receptor_highlight=None,
     style="cartoon",
     surface=False,
@@ -25,7 +25,7 @@ def _view_3d(
     Parameters:
     - receptor_path (str): Path to the receptor PDB file
     - ligand_path (str, optional): Path to the ligand PDB file
-    - docked_path (str, optional): Path to the docked pose PDB file
+    - docked_sdf_path (str, optional): Path to the docked pose PDB file
     - receptor_highlight (int, optional): Residue number to highlight in the receptor
     - style (str): Style for receptor visualization ('cartoon', 'stick', 'sphere', or 'line')
     - surface (bool): Whether to show the protein surface
@@ -75,8 +75,8 @@ def _view_3d(
         )
 
     # Add docked poses if provided
-    if docked_path:
-        v.addModelsAsFrames(open(docked_path).read())
+    if docked_sdf_path:
+        v.addModelsAsFrames(open(docked_sdf_path).read())
         v.setStyle(
             {"model": -3},
             {"stick": {"colorscheme": "greenCarbon", "radius": stick_radius * 1.25}},
@@ -91,7 +91,7 @@ def _view_3d(
     v.rotate(rotate_degree)
 
     # Set animation if multiple models are present
-    if ligand_path or docked_path:
+    if ligand_path or docked_sdf_path:
         v.animate({"interval": animation_interval})
 
     return v

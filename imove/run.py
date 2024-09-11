@@ -10,7 +10,7 @@ from .prepare import (
 )
 from .results import Docked
 
-def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_dict=None, wkdir="../", verbose=False, box_size=20, p450=False):
+def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_dict=None, wkdir="../", verbose=False, box_size=20, p450=False, smarts_for_distance=None):
 
     log(f"Starting docking process for gene_id: {gene_id}, ligand: {ligand}", verbose=verbose)
 
@@ -83,7 +83,8 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
                 catalytic_codon_in_motif=catalytic_codon_in_motif,
                 catalytic_molecule=catalytic_molecule, 
                 mutagenesis_dict=mutagenesis_dict,
-                p450=p450
+                p450=p450,
+                smarts_for_distance=smarts_for_distance
                 )
 
 
