@@ -42,14 +42,18 @@ def calculate_rmsd_matrix(poses):
     return rmsd_matrix
 
 
-def calculate_distances(receptor_path, docked_path, residue_number, catalytic_molecule):
+def calculate_distances(receptor_path, docked_path, residue_number, catalytic_molecule, p450):
     # Load the protein structure using our pandas loader
     receptor_df = pdb_to_pandas(receptor_path)
-    # Find the specific atom in the protein
-    target_atom = receptor_df[
-        (receptor_df["residue_number"] == residue_number)
-        & (receptor_df["atom_name"] == catalytic_molecule)
-    ]
+
+    if p450:
+        target_atom = receptor_df.query("atom_name == 'FE'")
+    else:
+        # Find the specific atom in the protein
+        target_atom = receptor_df[
+            (receptor_df["residue_number"] == residue_number)
+            & (receptor_df["atom_name"] == catalytic_molecule)
+        ]
 
     if target_atom.empty:
         raise ValueError(

@@ -129,7 +129,7 @@ def download_and_prepare_alphafold_pdb(gene_id, output_dir, ph=7.4, mutagenesis_
 
 def pdb_to_heme_coords(pdb_path):
     df_pdb = pdb_to_pandas(pdb_path)
-    x,y,z = df_pdb.query("residue_name == 'HEM' and atom_name == 'FE'")[['x', 'y', 'z']].values[0]
+    x,y,z = df_pdb.query("atom_name == 'FE'")[['x', 'y', 'z']].values[0]
     return x, y, z
 
 

@@ -13,16 +13,17 @@ from .results import Docked
 def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_dict=None, wkdir="../", verbose=False, box_size=20, p450=False):
 
     log(f"Starting docking process for gene_id: {gene_id}, ligand: {ligand}", verbose=verbose)
-    pdb_path, ligand_path, receptors_save_path, ligand_save_path, docked_folder_path, logs_folder_path = prepare_folders(wkdir, gene_id, ligand, mut_str)
 
     if mutagenesis_dict:
         mut_str = "_" + '_'.join([str(key) + value for key, value in mutagenesis_dict.items()])
     else:
         mut_str = ""
 
+    pdb_path, ligand_path, receptors_save_path, ligand_save_path, docked_folder_path, logs_folder_path = prepare_folders(wkdir, gene_id, ligand, mut_str)
+
     if not os.path.exists(pdb_path):
         log(f"Receptor file not found. Downloading and preparing AlphaFold PDB for {gene_id}", verbose=verbose)
-        download_and_prepare_alphafold_pdb(gene_id, output_dir=receptors_save_path, ph=7.4, mutagenesis_dict=mutagenesis_dict)
+        download_and_prepare_alphafold_pdb(gene_id, output_dir=receptors_save_path, ph=7.4, mutagenesis_dict=mutagenesis_dict, p450=p450)
     else:
         log("receptor file found...", verbose=verbose)
 
@@ -30,7 +31,10 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
         log(f"Ligand file not found. Downloading and preparing ligand {ligand}", verbose=verbose)
         download_and_prepare_ligand(ligand, save_path=ligand_save_path) 
 
-    if not p450:        
+    if p450:
+        active_site_motif, catalytic_molecule, catalytic_codon_in_motif = None, None, None
+        x, y, z = pdb_to_heme_coords(pdb_path)        
+    else:
         if override_motif:
             active_site_motif, catalytic_molecule, catalytic_codon_in_motif = override_motif
             log(f"Using provided override motif - active site motif: {active_site_motif}, catalytic molecule: {catalytic_molecule}, catalytic codon in motif: {catalytic_codon_in_motif}", verbose=verbose)
@@ -45,8 +49,7 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
             catalytic_molecule=catalytic_molecule, 
             catalytic_codon_in_motif=catalytic_codon_in_motif)
         x, y, z = res[0]['coordinates']
-    else:
-        x, y, z = pdb_to_heme_coords(pdb_path)
+
     log(f"Active site coordinates: x={x}, y={y}, z={z}", verbose=verbose)
 
     log_path = os.path.join(logs_folder_path, f"{gene_id}{mut_str}_{ligand}.log")
@@ -79,7 +82,8 @@ def dock(gene_id, ligand, override_motif=None, override_desc=None, mutagenesis_d
                 active_site_motif=active_site_motif,
                 catalytic_codon_in_motif=catalytic_codon_in_motif,
                 catalytic_molecule=catalytic_molecule, 
-                mutagenesis_dict=mutagenesis_dict
+                mutagenesis_dict=mutagenesis_dict,
+                p450=p450
                 )
 
 
